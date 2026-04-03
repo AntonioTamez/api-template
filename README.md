@@ -51,7 +51,15 @@ scripts/                              # Renaming + migration scripts
    dotnet test
    ```
 
-4. Apply database migrations (optional during first run):
+4. Ensure PostgreSQL is running. The easiest option is to levantar el contenedor de docker-compose (solo el servicio de base de datos) antes de iniciar la API:
+
+   ```bash
+   docker compose up -d postgres
+   ```
+
+   Si prefieres usar otra instancia local, ajusta `Persistence:ConnectionString` en `appsettings.Development.json` para apuntar a ese host.
+
+5. Apply database migrations (optional during first run):
 
    ```bash
    dotnet ef database update \
@@ -59,17 +67,19 @@ scripts/                              # Renaming + migration scripts
      --startup-project Company.Template.Api/Company.Template.Api.csproj
    ```
 
-5. Launch the API:
+6. Launch the API (by default it listens on `http://localhost:5009` as defined in `Properties/launchSettings.json`):
 
    ```bash
    dotnet run --project Company.Template.Api/Company.Template.Api.csproj
    ```
 
-6. Validate el servicio:
-   - Health check: `curl http://localhost:5187/health/ready`
-   - Sample endpoint (customer lookup): `curl http://localhost:5187/api/v1/customers/{customerId}`
+   Si prefieres otro puerto, puedes ejecutar `ASPNETCORE_URLS=http://localhost:6000 dotnet run --project ...`.
 
-The API exposes versioned routes like `POST /api/v1/customers`. Health endpoints live at `/health` (liveness) and `/health/ready` (readiness). Update the port (`5187`) if you configured a different one. On startup the `TemplateDbContextSeeder` runs automatically, applying migrations and inserting three demo customers (Ada Lovelace, Alan Turing, Grace Hopper) if the database is empty.
+7. Validate el servicio:
+   - Health check: `curl http://localhost:5009/health/ready`
+   - Sample endpoint (customer lookup): `curl http://localhost:5009/api/v1/customers/{customerId}`
+
+The API exposes versioned routes like `POST /api/v1/customers`. Health endpoints live at `/health` (liveness) and `/health/ready` (readiness). Update las URLs si cambiaste el puerto (por ejemplo, al usar `ASPNETCORE_URLS`). On startup the `TemplateDbContextSeeder` runs automatically, applying migrations and inserting three demo customers (Ada Lovelace, Alan Turing, Grace Hopper) if the database is empty.
 
 ### Database migrations
 
