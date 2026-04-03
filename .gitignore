@@ -1,0 +1,37 @@
+# Build
+bin/
+obj/
+
+# User specific
+*.user
+*.swp
+*.suo
+*.userosscache
+*.sln.docstates
+
+# VS Code
+.vscode/
+
+# Rider
+.idea/
+
+# Dotnet artifacts
+*.generated.cs
+
+# Coverage
+*.coverage*
+TestResults/
+
+# Docker
+*.env
+/load-tests/k6/.env
+pg-data/
+pgadmin-data/
+
+# Logs
+logs/
+
+# Other
+/.vs/
+.DS_Store
+Thumbs.db

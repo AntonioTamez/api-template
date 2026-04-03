@@ -1,0 +1,17 @@
+bin/
+obj/
+.vs/
+.idea/
+.vscode/
+**/*.user
+**/*.swp
+**/*.suo
+TestResults/
+pg-data/
+load-tests/k6/.env
+.git/
+Dockerfile
+docker-compose.yml
+README.md
+PLAN.md
+scripts/
