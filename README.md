@@ -65,11 +65,11 @@ scripts/                              # Renaming + migration scripts
    dotnet run --project Company.Template.Api/Company.Template.Api.csproj
    ```
 
-6. Validate the service:
+6. Validate el servicio:
    - Health check: `curl http://localhost:5187/health/ready`
    - Sample endpoint (customer lookup): `curl http://localhost:5187/api/v1/customers/{customerId}`
 
-The API exposes versioned routes like `POST /api/v1/customers`. Health endpoints live at `/health` (liveness) and `/health/ready` (readiness). Update the port (`5187`) if you configured a different one.
+The API exposes versioned routes like `POST /api/v1/customers`. Health endpoints live at `/health` (liveness) and `/health/ready` (readiness). Update the port (`5187`) if you configured a different one. On startup the `TemplateDbContextSeeder` runs automatically, applying migrations and inserting three demo customers (Ada Lovelace, Alan Turing, Grace Hopper) if the database is empty.
 
 ### Database migrations
 
@@ -87,7 +87,7 @@ Both scripts execute `dotnet ef database update` using `Company.Template.Api` as
 
 ### Docker workflow
 
-1. Copy the sample environment file: `cp .env.example .env`.
+1. Copy the sample environment file: `cp .env.example .env` (compose will fail if `.env` is missing).
 2. Adjust database/user/password/ports as needed.
 3. Build and run the stack:
 
@@ -100,6 +100,8 @@ The API will be reachable at `http://localhost:${API_HTTP_PORT:-8080}` and Postg
 4. Validate the running containers:
    - `curl http://localhost:${API_HTTP_PORT:-8080}/health/ready`
    - `docker compose logs api -f`
+
+The same seeder runs inside the containerized API, so the demo customers appear the first time the stack boots with a clean database.
 
 ### Renaming the template
 

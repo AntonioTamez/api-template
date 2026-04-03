@@ -1,6 +1,7 @@
 using Company.Template.Application.Abstractions.Data;
 using Company.Template.Domain.Customers;
 using Company.Template.Infrastructure.Persistence.Repositories;
+using Company.Template.Infrastructure.Persistence.Seed;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +23,7 @@ public static class DependencyInjection
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<TemplateDbContext>());
         services.AddScoped<ICustomerRepository, CustomerRepository>();
+        services.AddScoped<TemplateDbContextSeeder>();
 
         return services;
     }

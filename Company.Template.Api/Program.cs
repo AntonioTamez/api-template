@@ -3,7 +3,10 @@ using Company.Template.Api.Options;
 using Company.Template.Application;
 using Company.Template.Infrastructure;
 using Company.Template.Infrastructure.Persistence;
+using Company.Template.Infrastructure.Persistence.Seed;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Serilog;
 
@@ -36,6 +39,8 @@ if (!string.IsNullOrWhiteSpace(persistenceOptions?.ConnectionString))
 
 var app = builder.Build();
 
+await SeedDatabaseAsync(app);
+
 app.UseExceptionHandler();
 app.UseSerilogRequestLogging();
 
@@ -49,6 +54,9 @@ app.UseHttpsRedirection();
 app.UseRateLimiter();
 app.UseAuthorization();
 
+app.MapGet("/", () => Results.Redirect("/swagger"))
+    .ExcludeFromDescription();
+
 app.MapControllers();
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
@@ -61,3 +69,10 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 });
 
 app.Run();
+
+static async Task SeedDatabaseAsync(WebApplication app)
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    var seeder = scope.ServiceProvider.GetRequiredService<TemplateDbContextSeeder>();
+    await seeder.SeedAsync();
+}

@@ -24,6 +24,10 @@ internal sealed class CustomerRepository : ICustomerRepository
 
     public Task<Customer?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Customers.AsNoTracking().FirstOrDefaultAsync(customer => customer.Id.Value == id, cancellationToken);
+        var customerId = new CustomerId(id);
+
+        return _dbContext.Customers
+            .AsNoTracking()
+            .FirstOrDefaultAsync(customer => customer.Id == customerId, cancellationToken);
     }
 }
