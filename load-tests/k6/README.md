@@ -25,7 +25,7 @@ Available variables:
 | `K6_VUS` | Concurrent virtual users | `10` |
 | `K6_DURATION` | Duration (e.g. `30s`, `5m`) | `30s` |
 
-## Run the test
+## Run the test (standalone)
 
 From `load-tests/k6` run:
 
@@ -34,3 +34,13 @@ docker compose up --build
 ```
 
 To stop the test, press `Ctrl+C` and remove the container with `docker compose down`.
+
+## Run the test against the observability stack
+
+If you already have the root `docker compose up` stack running (which includes Prometheus, Pushgateway, and Grafana), you can trigger the same scenario while streaming metrics directly into Prometheus with:
+
+```bash
+docker compose run --rm k6
+```
+
+This command must be executed from the repository root. It uses the `k6` service defined in the main `docker-compose.yml`, forwards metrics to the Pushgateway, and makes them visible in Grafana's k6 dashboard automatically.

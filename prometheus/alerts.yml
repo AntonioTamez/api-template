@@ -1,0 +1,21 @@
+groups:
+  - name: api-alerts
+    rules:
+      - alert: APIHighErrorRate
+        expr: sum(rate(http_requests_received_total{code=~"5.."}[5m])) / sum(rate(http_requests_received_total[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Elevated 5xx responses"
+          description: "More than 5% of requests returned 5xx in the last 5 minutes."
+
+  - name: k6-alerts
+    rules:
+      - alert: K6HighLatency
+        expr: histogram_quantile(0.95, sum(rate(k6_http_req_duration_seconds_bucket[1m])) by (le)) > 0.5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "k6 p95 latency above 500ms"

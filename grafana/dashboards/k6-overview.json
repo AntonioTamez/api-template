@@ -1,0 +1,57 @@
+{
+  "title": "k6 Load Test",
+  "uid": "k6-overview",
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Virtual Users",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "max(k6_vus)",
+          "legendFormat": "vus"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Requests per Second",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(k6_http_reqs_total[1m]))",
+          "legendFormat": "rps"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Latency Distribution",
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 10 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(k6_http_req_duration_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(k6_http_req_duration_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p50"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Check Failures",
+      "gridPos": { "x": 0, "y": 18, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(k6_checks{status=\"fail\"}[1m]))",
+          "legendFormat": "fails"
+        }
+      ]
+    }
+  ]
+}

@@ -8,8 +8,8 @@ Opinionated .NET 8 template that combines Clean Architecture with hexagonal pri
 - **Hexagonal**: Domain/Application expose ports (interfaces) while Infrastructure provides adapters (EF Core repositories, logging, etc.). Domain has no external references.
 - **Production-ready middleware**: Health checks (`/health`, `/health/ready`), ProblemDetails, Serilog request logging, and configurable rate limiting via `appsettings` or environment variables.
 - **Persistence**: EF Core 8 + Npgsql with dedicated `TemplateDbContext`, repository implementations, and migration scripts.
-- **Docker-first**: Multi-stage Dockerfile, docker-compose stack (API + PostgreSQL + optional pgAdmin), and migration helpers.
-- **Load testing**: `load-tests/k6` package ships with script, Dockerfile, docker-compose, `.env` template, and docs so any developer can run k6 locally with one command.
+- **Docker-first**: Multi-stage Dockerfile, docker-compose stack (API + PostgreSQL + optional pgAdmin) plus observability services (Prometheus, Pushgateway, Grafana) and migration helpers.
+- **Load testing**: `load-tests/k6` package ships with script, Dockerfile, docker-compose, `.env` template, and docs so any developer can run k6 locally—with optional Prometheus/Grafana dashboards.
 - **Easy renaming**: PowerShell and Bash scripts update file contents, directories, and project names from `Company.Template` to any other solution prefix.
 
 ## Project structure
@@ -99,17 +99,18 @@ Both scripts execute `dotnet ef database update` using `Company.Template.Api` as
 
 1. Copy the sample environment file: `cp .env.example .env` (compose will fail if `.env` is missing).
 2. Adjust database/user/password/ports as needed.
-3. Build and run the stack:
+3. Build and run the stack (API, Postgres, pgAdmin, Prometheus, Pushgateway, Grafana, postgres-exporter):
 
    ```bash
    docker compose up --build
    ```
 
-The API will be reachable at `http://localhost:${API_HTTP_PORT:-8080}` and Postgres at `${DB_PORT:-5432}`. pgAdmin is available on `${PGADMIN_PORT:-8081}`.
+The API will be reachable at `http://localhost:${API_HTTP_PORT:-8080}` and Postgres at `${DB_PORT:-5432}`. pgAdmin is available on `${PGADMIN_PORT:-8081}`. Prometheus lives at `http://localhost:${PROMETHEUS_PORT:-9090}`, Grafana at `http://localhost:${GRAFANA_PORT:-3000}` (default credentials `admin`/`admin`).
 
 4. Validate the running containers:
-   - `curl http://localhost:${API_HTTP_PORT:-8080}/health/ready`
-   - `docker compose logs api -f`
+    - `curl http://localhost:${API_HTTP_PORT:-8080}/health/ready`
+    - `docker compose logs api -f`
+    - Navigate to Grafana `/api-overview` or `/k6-overview` dashboards to observe metrics.
 
 The same seeder runs inside the containerized API, so the demo customers appear the first time the stack boots with a clean database.
 
@@ -129,14 +130,27 @@ Both scripts replace `Company.Template` across text files and rename folders/pro
 
 ## Load testing with Dockerized k6
 
-1. Navigate to `load-tests/k6`.
-2. Copy `.env.example` to `.env` and set:
-   - `K6_TARGET_URL` – API endpoint to hit (e.g., `http://host.docker.internal:8080/health/ready`).
-   - `K6_VUS` – concurrent users.
-   - `K6_DURATION` – duration such as `30s`, `5m`.
-3. Launch the test with `docker compose up --build`.
-4. Watch the console output for the final summary (k6 prints metrics like `http_req_duration`, `vus`, `checks`).
-5. Stop the test with `Ctrl+C` and tear down containers using `docker compose down`.
+### Recommended (Prometheus-integrated)
+
+1. Make sure the root `docker compose up` stack is running (Prometheus, Pushgateway, Grafana, API).
+2. From the repository root execute:
+
+   ```bash
+   docker compose run --rm k6
+   ```
+
+   This uses the `k6` service defined in `docker-compose.yml`, streams metrics to the Pushgateway/Prometheus, and fills the Grafana “k6 Load Test” dashboard automatically.
+
+3. Override defaults via environment variables (either edit `.env` or pass `K6_TARGET_URL=...` before the command).
+
+### Standalone mode
+
+If you only need console output, the legacy workflow is still available:
+
+1. Navigate to `load-tests/k6` (este directorio contiene su propio `.env.example`).
+2. Copy `.env.example` to `.env` and set `K6_TARGET_URL`, `K6_VUS`, `K6_DURATION`.
+3. Run `docker compose up --build` inside that directory.
+4. Stop with `Ctrl+C` and `docker compose down`.
 
 Artifacts included:
 
@@ -145,6 +159,22 @@ Artifacts included:
 - `docker-compose.yml` – exposes the environment variables.
 - `.env.example` – starting point for configuration.
 - `README.md` – quick reference for developers.
+
+## Observability (Prometheus + Loki + Grafana)
+
+The main `docker-compose.yml` now launches Prometheus, Pushgateway, postgres-exporter, Alertmanager, Loki (logs), Promtail (log shipping), and Grafana alongside the API.
+
+1. Start the stack: `docker compose up --build`.
+2. Access Prometheus at `http://localhost:${PROMETHEUS_PORT:-9090}` to inspect targets and raw queries.
+3. Access Loki at `http://localhost:${LOKI_PORT:-3100}` for raw log queries (or via Grafana's Explore).
+4. Access Grafana at `http://localhost:${GRAFANA_PORT:-3000}` (credentials: `${GRAFANA_ADMIN_USER:-admin}` / `${GRAFANA_ADMIN_PASSWORD:-admin}`). Two dashboards are provisioned automatically:
+   - **API Overview** – throughput, 5xx ratio, latency percentiles.
+   - **k6 Load Test** – VUs, RPS, p50/p95 latency, check failures.
+5. All health checks are also exported as Prometheus metrics thanks to `prometheus-net`.
+6. Alert samples are defined in `prometheus/alerts.yml` (high API error rate, k6 p95 latency) and routed through Alertmanager (`http://localhost:${ALERTMANAGER_PORT:-9093}`). Customize `alertmanager/alertmanager.yml` with your email/webhook integrations.
+7. Logs from all containers are automatically shipped to Loki via Promtail. In Grafana, switch the datasource to **Loki** in Explore and query using LogQL, e.g. `{job="api"} |= "error"` to find error messages.
+
+When you run `docker compose run --rm k6`, Prometheus collects the k6 metrics via Pushgateway and Grafana updates automatically. You can add more panels/dashboards under `grafana/dashboards/` and they will be provisioned on container restart.
 
 ## Rate limiting & configuration
 

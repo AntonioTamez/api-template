@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Prometheus;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -52,6 +53,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseRateLimiter();
+app.UseHttpMetrics();
 app.UseAuthorization();
 
 app.MapGet("/", () => Results.Redirect("/swagger"))
@@ -67,6 +69,8 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 {
     Predicate = registration => registration.Tags.Contains("ready")
 });
+
+app.MapMetrics();
 
 app.Run();
 
