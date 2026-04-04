@@ -160,21 +160,142 @@ Artifacts included:
 - `.env.example` – starting point for configuration.
 - `README.md` – quick reference for developers.
 
-## Observability (Prometheus + Loki + Grafana)
+## Observability (Logging, Metrics, Traces & Dashboards)
 
-The main `docker-compose.yml` now launches Prometheus, Pushgateway, postgres-exporter, Alertmanager, Loki (logs), Promtail (log shipping), and Grafana alongside the API.
+The template includes a complete observability stack: **Serilog** for structured logging, **Prometheus** for metrics, **Loki** for log centralization, and **Grafana** for visualization with pre-configured dashboards.
 
-1. Start the stack: `docker compose up --build`.
-2. Access Prometheus at `http://localhost:${PROMETHEUS_PORT:-9090}` to inspect targets and raw queries.
-3. Access Loki at `http://localhost:${LOKI_PORT:-3100}` for raw log queries (or via Grafana's Explore).
-4. Access Grafana at `http://localhost:${GRAFANA_PORT:-3000}` (credentials: `${GRAFANA_ADMIN_USER:-admin}` / `${GRAFANA_ADMIN_PASSWORD:-admin}`). Two dashboards are provisioned automatically:
-   - **API Overview** – throughput, 5xx ratio, latency percentiles.
-   - **k6 Load Test** – VUs, RPS, p50/p95 latency, check failures.
-5. All health checks are also exported as Prometheus metrics thanks to `prometheus-net`.
-6. Alert samples are defined in `prometheus/alerts.yml` (high API error rate, k6 p95 latency) and routed through Alertmanager (`http://localhost:${ALERTMANAGER_PORT:-9093}`). Customize `alertmanager/alertmanager.yml` with your email/webhook integrations.
-7. Logs from all containers are automatically shipped to Loki via Promtail. In Grafana, switch the datasource to **Loki** in Explore and query using LogQL, e.g. `{job="api"} |= "error"` to find error messages.
+### Structured Logging with Serilog
 
-When you run `docker compose run --rm k6`, Prometheus collects the k6 metrics via Pushgateway and Grafana updates automatically. You can add more panels/dashboards under `grafana/dashboards/` and they will be provisioned on container restart.
+The API uses **Serilog** as its structured logging library, configured in `Program.cs`:
+
+```csharp
+builder.Host.UseSerilog((context, loggerConfiguration) => loggerConfiguration
+    .ReadFrom.Configuration(context.Configuration)
+    .Enrich.FromLogContext()
+    .WriteTo.Console());
+```
+
+**Features:**
+- Configuration read from `appsettings.json` (`Serilog` section).
+- Automatic enrichment with HTTP context (request ID, method, path, status code, duration).
+- Console sink enabled by default.
+- Additional sinks (File, Seq, etc.) can be added in `appsettings` or via code.
+
+**Override via environment:**
+```bash
+export Serilog__WriteTo__0__Args__outputTemplate="{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}"
+```
+
+### Metrics with Prometheus
+
+The API exposes Prometheus-format metrics via `prometheus-net`:
+
+- Metrics endpoint: `GET /metrics` (auto-mapped by `app.MapMetrics()`).
+- Automatic HTTP metrics: requests, durations, response codes.
+- Health checks as metrics: Postgres and other component status.
+
+**Prometheus integration (docker-compose):**
+- Prometheus scrapes `/metrics` from the `api` container.
+- Pushgateway receives k6 metrics during load tests.
+
+**Available metrics:**
+- `http_requests_total` – request counter by method, endpoint, status.
+- `http_request_duration_seconds` – latency histogram.
+- `aspnetcore_health_checks_*` – health check status.
+
+### Log Centralization with Loki
+
+All containers ship logs to **Loki** via **Promtail**:
+
+1. **Promtail** listens to Docker container logs at `/var/lib/docker/containers`.
+2. **Loki** stores and indexes logs.
+3. **Grafana** queries Loki via configured datasource.
+
+**Example LogQL queries in Grafana:**
+- All API logs: `{job="api"}`
+- Errors only: `{job="api"} |= "error"`
+- By level: `{job="api"} | json | level="error"`
+
+### Grafana Dashboards
+
+Two dashboards auto-provisioned:
+
+| Dashboard | Content |
+|-----------|--------|
+| **API Overview** | Throughput (req/s), 5xx error ratio, latency (p50, p95, p99), memory usage, DB connections |
+| **k6 Load Test** | Active Virtual Users, requests/s, latency (p50, p95), failed checks rate, HTTP errors |
+
+**Access:** `http://localhost:${GRAFANA_PORT:-3000}` (admin/admin)
+
+### Alerts and Alertmanager
+
+Alerts configured in `monitoring/prometheus/alerts.yml`:
+
+- `HighApiErrorRate`: >5% 5xx responses in 5 minutes.
+- `HighK6Latency`: p95 latency >1s.
+- `ApiDown`: API unavailable.
+
+**Notification configuration:** Edit `monitoring/alertmanager/alertmanager.yml` with email, webhook, Slack, etc.
+
+### Complete Observability Pipeline
+
+```
+┌─────────┐    ┌─────────────┐    ┌──────────┐    ┌─────────┐
+│   API   │───▶│  Serilog    │───▶│ Promtail │───▶│  Loki   │
+│ (logs)  │    │  (Console)  │    │          │    │         │
+└─────────┘    └─────────────┘    └──────────┘    └─────────┘
+       │
+       │ /metrics
+       ▼
+┌─────────────┐    ┌─────────────┐    ┌─────────┐
+│ Prometheus  │◀───│  Pushgateway │◀───│   k6    │
+│  (scrapes) │    │  (batch)    │    │ (tests) │
+└─────────────┘    └─────────────┘    └─────────┘
+       │
+       ▼
+┌─────────────────────────────────────────────────┐
+│                Grafana                          │
+│  - Dashboards (API, k6)                        │
+│  - Explore (Loki logs)                        │
+│  - Alerts (Alertmanager)                      │
+└─────────────────────────────────────────────────┘
+```
+
+### Custom Configuration
+
+**Adding extra Serilog sinks (e.g., File, Seq):**
+
+In `appsettings.json`:
+```json
+"Serilog": {
+  "WriteTo": [
+    { "Name": "Console" },
+    { "Name": "File", "Args": { "path": "logs/api-.log" } }
+  ]
+}
+```
+
+**Enabling OpenTelemetry (traces):**
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+```
+Add package `OpenTelemetry.Exporter.OpenTelemetryProtocol` and configure in `Program.cs`.
+
+### Observability Validation
+
+```bash
+# View raw metrics
+curl http://localhost:8080/metrics
+
+# View health checks
+curl http://localhost:8080/health/ready
+
+# Query logs in Loki (via Grafana Explore)
+{job="api"} |= "error"
+
+# View targets in Prometheus
+http://localhost:9090/targets
+```
 
 ## Rate limiting & configuration
 

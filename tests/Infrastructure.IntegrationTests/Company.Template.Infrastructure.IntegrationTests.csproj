@@ -17,8 +17,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Company.Template.Infrastructure\Company.Template.Infrastructure.csproj" />
-    <ProjectReference Include="..\Company.Template.Infrastructure.Persistence\Company.Template.Infrastructure.Persistence.csproj" />
+    <ProjectReference Include="..\..\src\Infrastructure\Company.Template.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Infrastructure.Persistence\Company.Template.Infrastructure.Persistence.csproj" />
   </ItemGroup>
 
 </Project>
