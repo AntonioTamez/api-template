@@ -143,11 +143,9 @@ services:
       K6_VUS: ${K6_VUS:-10}
       K6_DURATION: ${K6_DURATION:-30s}
     command:
-      - "--out"
-      - "prometheus=pushgateway=http://pushgateway:9091/metrics/job/k6"
+      - "run"
       - "/tests/scripts/smoke.js"
     depends_on:
-      - pushgateway
       - api
     networks:
       - app-net

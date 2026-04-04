@@ -12,3 +12,15 @@ datasources:
     access: proxy
     url: http://loki:3100
     editable: false
+
+  - name: PostgreSQL
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    database: template_db
+    user: template
+    password: template
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1600
+      interval: daily
