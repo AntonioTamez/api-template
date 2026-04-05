@@ -1,0 +1,164 @@
+{
+  "title": "Logs Overview",
+  "uid": "logs-overview",
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "time": { "from": "now-1h", "to": "now" },
+  "refresh": "30s",
+  "panels": [
+
+    { "type": "row", "title": "Summary", "collapsed": false, "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 }, "id": 1 },
+
+    {
+      "type": "stat", "id": 2, "title": "Errors (last 1h)",
+      "gridPos": { "x": 0, "y": 1, "w": 6, "h": 5 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [{
+        "expr": "sum(count_over_time({job=\"api\"} |= \"[ERR]\" [1h]))",
+        "legendFormat": "errors"
+      }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 10 }] } } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "textMode": "auto" }
+    },
+
+    {
+      "type": "stat", "id": 3, "title": "Warnings (last 1h)",
+      "gridPos": { "x": 6, "y": 1, "w": 6, "h": 5 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [{
+        "expr": "sum(count_over_time({job=\"api\"} |= \"[WRN]\" [1h]))",
+        "legendFormat": "warnings"
+      }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 5 }, { "color": "orange", "value": 20 }] } } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "textMode": "auto" }
+    },
+
+    {
+      "type": "stat", "id": 4, "title": "Total Log Lines (last 1h)",
+      "gridPos": { "x": 12, "y": 1, "w": 6, "h": 5 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [{
+        "expr": "sum(count_over_time({job=\"api\"}[1h]))",
+        "legendFormat": "total"
+      }],
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" }
+    },
+
+    {
+      "type": "stat", "id": 5, "title": "Log Rate",
+      "gridPos": { "x": 18, "y": 1, "w": 6, "h": 5 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [{
+        "expr": "sum(rate({job=\"api\"}[5m]))",
+        "legendFormat": "lines/sec"
+      }],
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" }
+    },
+
+    { "type": "row", "title": "Log Volume", "collapsed": false, "gridPos": { "x": 0, "y": 6, "w": 24, "h": 1 }, "id": 10 },
+
+    {
+      "type": "timeseries", "id": 11, "title": "Log Volume by Level",
+      "gridPos": { "x": 0, "y": 7, "w": 24, "h": 8 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        { "expr": "sum(count_over_time({job=\"api\"} |= \"[INF]\" [1m]))", "legendFormat": "INFO" },
+        { "expr": "sum(count_over_time({job=\"api\"} |= \"[WRN]\" [1m]))", "legendFormat": "WARN" },
+        { "expr": "sum(count_over_time({job=\"api\"} |= \"[ERR]\" [1m]))", "legendFormat": "ERROR" },
+        { "expr": "sum(count_over_time({job=\"api\"} |= \"[DBG]\" [1m]))", "legendFormat": "DEBUG" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "custom": { "lineWidth": 2 } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "ERROR" }, "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "WARN" },  "properties": [{ "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "INFO" },  "properties": [{ "id": "color", "value": { "fixedColor": "blue", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "DEBUG" }, "properties": [{ "id": "color", "value": { "fixedColor": "gray", "mode": "fixed" } }] }
+        ]
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } }
+    },
+
+    { "type": "row", "title": "All Logs", "collapsed": false, "gridPos": { "x": 0, "y": 15, "w": 24, "h": 1 }, "id": 20 },
+
+    {
+      "type": "logs", "id": 21, "title": "Log Stream",
+      "gridPos": { "x": 0, "y": 16, "w": 24, "h": 16 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [{
+        "expr": "{job=\"api\"}",
+        "legendFormat": ""
+      }],
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none"
+      }
+    },
+
+    { "type": "row", "title": "Errors & Warnings", "collapsed": false, "gridPos": { "x": 0, "y": 32, "w": 24, "h": 1 }, "id": 30 },
+
+    {
+      "type": "logs", "id": 31, "title": "Error Logs",
+      "gridPos": { "x": 0, "y": 33, "w": 24, "h": 12 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [{
+        "expr": "{job=\"api\"} |= \"[ERR]\"",
+        "legendFormat": ""
+      }],
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none"
+      }
+    },
+
+    {
+      "type": "logs", "id": 32, "title": "Warning Logs",
+      "gridPos": { "x": 0, "y": 45, "w": 24, "h": 10 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [{
+        "expr": "{job=\"api\"} |= \"[WRN]\"",
+        "legendFormat": ""
+      }],
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none"
+      }
+    },
+
+    { "type": "row", "title": "HTTP Request Logs", "collapsed": false, "gridPos": { "x": 0, "y": 55, "w": 24, "h": 1 }, "id": 40 },
+
+    {
+      "type": "logs", "id": 41, "title": "Slow Requests (> 1s)",
+      "gridPos": { "x": 0, "y": 56, "w": 24, "h": 10 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [{
+        "expr": "{job=\"api\"} |= \"HTTP\" | pattern `<_> responded <code> in <duration>ms` | duration > 1000",
+        "legendFormat": ""
+      }],
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "sortOrder": "Descending"
+      }
+    }
+  ]
+}
