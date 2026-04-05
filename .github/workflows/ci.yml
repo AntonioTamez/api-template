@@ -34,14 +34,14 @@ jobs:
         run: >
           dotnet test tests/Domain.UnitTests/
           --no-build -c Release
-          --logger "github;annotations.titleFormat=@test"
+          --logger GitHubActions
           --collect:"XPlat Code Coverage"
 
       - name: Unit tests — Application
         run: >
           dotnet test tests/Application.UnitTests/
           --no-build -c Release
-          --logger "github;annotations.titleFormat=@test"
+          --logger GitHubActions
           --collect:"XPlat Code Coverage"
 
   integration-tests:
@@ -83,7 +83,7 @@ jobs:
         run: >
           dotnet test tests/Infrastructure.IntegrationTests/
           --no-build -c Release
-          --logger "github;annotations.titleFormat=@test"
+          --logger GitHubActions
         env:
           Persistence__ConnectionString: >-
             Host=localhost;Port=5432;Database=template_db_test;
