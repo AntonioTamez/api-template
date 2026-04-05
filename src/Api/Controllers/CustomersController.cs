@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using Company.Template.Api.Contracts.Customers;
 using Company.Template.Application.Customers.GetCustomerById;
 using Company.Template.Application.Customers.Models;
@@ -9,7 +10,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace Company.Template.Api.Controllers;
 
 [ApiController]
-[Route("api/v1/customers")]
+[ApiVersion("1.0")]
+[Route("api/customers")]
 public sealed class CustomersController : ControllerBase
 {
     private readonly ISender _sender;

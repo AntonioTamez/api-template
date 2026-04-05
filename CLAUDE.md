@@ -115,7 +115,7 @@ Services: Prometheus (9090), Grafana (3000), Loki (3100), PgAdmin (8081), Alertm
 - Copy `.env.example` to `.env` before running Docker
 - `appsettings.json` — Serilog, Persistence connection string, RateLimiting
 - Rate limiting is fixed-window per IP; override via env: `RateLimiting__PermitLimit=200`
-- API versioning is **header-based**: send `X-Api-Version: 1.0` (defaults to 1.0 when omitted)
+- API versioning is **header-based** via `Asp.Versioning.Mvc` 8.x: send `X-Api-Version: 1.0` (defaults to 1.0 when omitted). Route is `api/customers` — no version in the URL. Swagger UI shows the header on each endpoint via `ApiVersionHeaderOperationFilter`.
 - Database seeder runs on startup and inserts 3 demo customers if DB is empty
 - `global.json` enforces .NET SDK 8.0.419
 - `Directory.Build.props` enforces nullable reference types, `TreatWarningsAsErrors=true`
