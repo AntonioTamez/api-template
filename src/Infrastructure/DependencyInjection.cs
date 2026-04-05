@@ -1,4 +1,5 @@
 using Company.Template.Application.Abstractions.Messaging;
+using Company.Template.Infrastructure.Events;
 using Company.Template.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

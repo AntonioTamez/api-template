@@ -1,7 +1,7 @@
 using Asp.Versioning;
 using Company.Template.Api.Contracts.Customers;
 using Company.Template.Application.Customers.GetCustomerById;
-using Company.Template.Application.Customers.Models;
+using Company.Template.Application.Customers;
 using Company.Template.Application.Customers.RegisterCustomer;
 using Company.Template.Domain.Shared;
 using MediatR;

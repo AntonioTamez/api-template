@@ -2,7 +2,7 @@ using Company.Template.Application.Abstractions.Messaging;
 using Company.Template.Domain.Abstractions;
 using MediatR;
 
-namespace Company.Template.Infrastructure;
+namespace Company.Template.Infrastructure.Events;
 
 internal sealed class MediatRDomainEventDispatcher : IDomainEventDispatcher
 {

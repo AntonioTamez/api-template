@@ -1,5 +1,5 @@
 using Company.Template.Application.Abstractions.Messaging;
-using Company.Template.Application.Customers.Models;
+using Company.Template.Application.Customers;
 
 namespace Company.Template.Application.Customers.GetCustomerById;
 

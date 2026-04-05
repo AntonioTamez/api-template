@@ -1,6 +1,6 @@
 using Company.Template.Application.Abstractions.Data;
 using Company.Template.Application.Abstractions.Messaging;
-using Company.Template.Application.Customers.Models;
+using Company.Template.Application.Customers;
 using Company.Template.Domain.Customers;
 using Company.Template.Domain.Errors;
 using Company.Template.Domain.Shared;
