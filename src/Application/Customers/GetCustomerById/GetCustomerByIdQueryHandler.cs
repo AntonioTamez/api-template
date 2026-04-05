@@ -1,6 +1,7 @@
 using Company.Template.Application.Abstractions.Messaging;
 using Company.Template.Application.Customers.Models;
 using Company.Template.Domain.Customers;
+using Company.Template.Domain.Errors;
 using Company.Template.Domain.Shared;
 
 namespace Company.Template.Application.Customers.GetCustomerById;
@@ -20,7 +21,7 @@ internal sealed class GetCustomerByIdQueryHandler : IQueryHandler<GetCustomerByI
 
         if (customer is null)
         {
-            return Result.Failure<CustomerResponse>(new Error("Customer.NotFound", "Customer not found."));
+            return Result.Failure<CustomerResponse>(DomainErrors.Customer.NotFound(request.CustomerId));
         }
 
         var response = new CustomerResponse(customer.Id.Value, customer.FirstName, customer.LastName, customer.Email.Value);

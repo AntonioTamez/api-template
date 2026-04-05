@@ -77,9 +77,11 @@ tests/
 
 **IUnitOfWork** — `TemplateDbContext` implements `IUnitOfWork` and is registered under that interface in DI. Handlers inject `IUnitOfWork` to call `SaveChangesAsync`.
 
-**Error → HTTP status mapping** — Controllers map `Result.Error` to HTTP status using a convention: if `error.Code` contains `"NotFound"` → 404, otherwise → 400. Define errors in `Domain/Errors/`.
+**Domain events** — Aggregates raise events via `RaiseDomainEvent()` (inherited from `Entity<T>`). After `SaveChangesAsync`, handlers call `IDomainEventDispatcher.DispatchAsync(aggregate.DomainEvents)` then `aggregate.ClearDomainEvents()`. The dispatcher wraps each event in `DomainEventNotification<T>` and publishes via MediatR. Event handlers implement `INotificationHandler<DomainEventNotification<TDomainEvent>>`.
 
-**`Infrastructure` vs `Infrastructure.Persistence`** — `Infrastructure` is a thin DI aggregation layer (`AddInfrastructure` delegates to `AddPersistence`). All actual EF Core, repositories, and migrations live in `Infrastructure.Persistence`.
+**Error → HTTP status mapping** — `Error` carries an `ErrorType` enum (`Failure`, `Validation`, `NotFound`, `Conflict`). Controllers switch on `error.Type` for status code. All errors are defined in `Domain/Errors/DomainErrors` with explicit `ErrorType`.
+
+**`Infrastructure` vs `Infrastructure.Persistence`** — `Infrastructure` is a thin DI aggregation layer (`AddInfrastructure` delegates to `AddPersistence` and registers `IDomainEventDispatcher`). All actual EF Core, repositories, and migrations live in `Infrastructure.Persistence`.
 
 **Adding a new aggregate** — Follow the `Customer` example:
 1. `Domain/` — Entity + Id ValueObject + domain events + `IRepository` interface + error definitions in `Domain/Errors/`

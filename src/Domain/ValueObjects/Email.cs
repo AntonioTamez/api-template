@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using Company.Template.Domain.Errors;
 using Company.Template.Domain.Shared;
 
