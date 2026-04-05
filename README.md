@@ -15,14 +15,18 @@ Opinionated .NET 8 template that combines Clean Architecture with hexagonal pri
 ## Project structure
 
 ```
-Company.Template.Api/                 # ASP.NET Core API (controllers, DI setup, middleware)
-Company.Template.Application/         # Application layer (MediatR, commands/queries, validators)
-Company.Template.Domain/              # Entities, value objects, Result/Error pattern, repository contracts
-Company.Template.Infrastructure/      # Cross-cutting infrastructure + registration glue
-Company.Template.Infrastructure.Persistence/  # EF Core DbContext, configurations, repositories
-Company.Template.*.UnitTests/         # Sample unit tests per layer
-load-tests/k6/                        # Dockerized k6 load-testing bundle
-scripts/                              # Renaming + migration scripts
+src/
+├── Api/                        # ASP.NET Core API (controllers, DI setup, middleware)
+├── Application/                # Application layer (MediatR, commands/queries, validators)
+├── Domain/                     # Entities, value objects, Result/Error pattern, repository contracts
+├── Infrastructure/             # Cross-cutting infrastructure + registration glue
+└── Infrastructure.Persistence/ # EF Core DbContext, configurations, repositories
+tests/
+├── Domain.UnitTests/
+├── Application.UnitTests/
+└── Infrastructure.IntegrationTests/
+load-tests/k6/                  # Dockerized k6 load-testing bundle
+scripts/                        # Renaming + migration scripts
 ```
 
 ## Prerequisites
@@ -51,35 +55,33 @@ scripts/                              # Renaming + migration scripts
    dotnet test
    ```
 
-4. Ensure PostgreSQL is running. The easiest option is to levantar el contenedor de docker-compose (solo el servicio de base de datos) antes de iniciar la API:
+4. Ensure PostgreSQL is running. The easiest option is to start only the database container before launching the API:
 
    ```bash
    docker compose up -d postgres
    ```
 
-   Si prefieres usar otra instancia local, ajusta `Persistence:ConnectionString` en `appsettings.Development.json` para apuntar a ese host.
+   If you prefer a local instance, update `Persistence:ConnectionString` in `appsettings.Development.json` to point to that host.
 
 5. Apply database migrations (optional during first run):
 
    ```bash
-   dotnet ef database update \
-     --project Company.Template.Infrastructure.Persistence/Company.Template.Infrastructure.Persistence.csproj \
-     --startup-project Company.Template.Api/Company.Template.Api.csproj
+   dotnet ef database update --project src/Infrastructure.Persistence/Company.Template.Infrastructure.Persistence.csproj --startup-project src/Api/Company.Template.Api.csproj
    ```
 
 6. Launch the API (by default it listens on `http://localhost:5009` as defined in `Properties/launchSettings.json`):
 
    ```bash
-   dotnet run --project Company.Template.Api/Company.Template.Api.csproj
+   dotnet run --project src/Api/Company.Template.Api.csproj
    ```
 
-   Si prefieres otro puerto, puedes ejecutar `ASPNETCORE_URLS=http://localhost:6000 dotnet run --project ...`.
+   To use a different port: `ASPNETCORE_URLS=http://localhost:6000 dotnet run --project src/Api/Company.Template.Api.csproj`.
 
-7. Validate el servicio:
+7. Validate the service:
    - Health check: `curl http://localhost:5009/health/ready`
-   - Sample endpoint (customer lookup): `curl http://localhost:5009/api/v1/customers/{customerId}`
+   - Sample endpoint (customer lookup): `curl -H "X-Api-Version: 1.0" http://localhost:5009/api/customers/{customerId}`
 
-The API exposes versioned routes like `POST /api/v1/customers`. Health endpoints live at `/health` (liveness) and `/health/ready` (readiness). Update las URLs si cambiaste el puerto (por ejemplo, al usar `ASPNETCORE_URLS`). On startup the `TemplateDbContextSeeder` runs automatically, applying migrations and inserting three demo customers (Ada Lovelace, Alan Turing, Grace Hopper) if the database is empty.
+The API uses header-based versioning (`X-Api-Version: 1.0`). Routes follow the pattern `POST /api/customers`. Health endpoints live at `/health` (liveness) and `/health/ready` (readiness). Update the URLs if you changed the port (e.g. via `ASPNETCORE_URLS`). On startup the `TemplateDbContextSeeder` runs automatically, applying migrations and inserting three demo customers (Ada Lovelace, Alan Turing, Grace Hopper) if the database is empty.
 
 ### Database migrations
 
@@ -93,7 +95,7 @@ pwsh ./scripts/run-migrations.ps1
 ./scripts/run-migrations.sh
 ```
 
-Both scripts execute `dotnet ef database update` using `Company.Template.Api` as the startup project.
+Both scripts execute `dotnet ef database update` using `src/Api` as the startup project.
 
 ### Docker workflow
 
@@ -147,7 +149,7 @@ Both scripts replace `Company.Template` across text files and rename folders/pro
 
 If you only need console output, the legacy workflow is still available:
 
-1. Navigate to `load-tests/k6` (este directorio contiene su propio `.env.example`).
+1. Navigate to `load-tests/k6` (this directory contains its own `.env.example`).
 2. Copy `.env.example` to `.env` and set `K6_TARGET_URL`, `K6_VUS`, `K6_DURATION`.
 3. Run `docker compose up --build` inside that directory.
 4. Stop with `Ctrl+C` and `docker compose down`.
@@ -307,6 +309,36 @@ export RateLimiting__WindowInSeconds=30
 ```
 
 Persistence settings live under `Persistence:ConnectionString` and can be overridden with `Persistence__ConnectionString` when running in Docker or against other database engines.
+
+## CI/CD
+
+### Workflows
+
+| Workflow | Trigger | Jobs |
+|----------|---------|------|
+| **CI** (`.github/workflows/ci.yml`) | Push / PR to `main` | Build → Unit tests → Integration tests (Postgres service) → Docker build |
+| **Docker Publish** (`.github/workflows/docker-publish.yml`) | Push tag `v*.*.*` | Tests → Build & push image to `ghcr.io` |
+
+### Docker image
+
+Images are published to GitHub Container Registry under `ghcr.io/<owner>/<repo>` and tagged automatically from the git tag:
+
+| Git tag | Docker tags |
+|---------|-------------|
+| `v1.2.3` | `1.2.3`, `1.2`, `1`, `sha-<short>` |
+
+### Releasing a new version
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The `docker-publish` workflow picks up the tag, runs the unit tests, and pushes the image.
+
+### Required secrets
+
+The workflow uses `GITHUB_TOKEN` (automatically provided by GitHub Actions) to push to GHCR — no extra secrets needed.
 
 ## Next steps
 

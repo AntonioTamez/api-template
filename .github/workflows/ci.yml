@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-unit-tests:
+    name: Build & Unit Tests
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore -c Release
+
+      - name: Unit tests — Domain
+        run: >
+          dotnet test tests/Domain.UnitTests/
+          --no-build -c Release
+          --logger "github;annotations.titleFormat=@test"
+          --collect:"XPlat Code Coverage"
+
+      - name: Unit tests — Application
+        run: >
+          dotnet test tests/Application.UnitTests/
+          --no-build -c Release
+          --logger "github;annotations.titleFormat=@test"
+          --collect:"XPlat Code Coverage"
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-24.04
+    needs: build-and-unit-tests
+
+    services:
+      postgres:
+        image: postgres:16.4
+        env:
+          POSTGRES_DB: template_db_test
+          POSTGRES_USER: template
+          POSTGRES_PASSWORD: template
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore -c Release
+
+      - name: Integration tests
+        run: >
+          dotnet test tests/Infrastructure.IntegrationTests/
+          --no-build -c Release
+          --logger "github;annotations.titleFormat=@test"
+        env:
+          Persistence__ConnectionString: >-
+            Host=localhost;Port=5432;Database=template_db_test;
+            Username=template;Password=template
+
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-24.04
+    needs: build-and-unit-tests
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: company-template-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
